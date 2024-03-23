@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trackpad</title>
+    <style>
+      body,
+      body:fullscreen::backdrop {
+        position: fixed;
+        inset: 0px;
+        background: #111111;
+      }
+
+      body:fullscreen > button {
+        display: none;
+      }
+    </style>
+    <script>
+      window.onload = () => {
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        ws.onopen = () => {
+          let isClick = false;
+          let isRightClick = false;
+          let isRightClickTimeout = null;
+
+          window.addEventListener("touchstart", ({ touches }) => {
+            isClick = true;
+            isRightClickTimeout = setTimeout(() => (isRightClick = true), 500);
+            const touch = touches[0];
+            ws.send(
+              [
+                Math.round(touch.clientX),
+                Math.round(touch.clientY),
+                "start",
+              ].join(" ")
+            );
+          });
+
+          window.addEventListener("touchmove", ({ touches }) => {
+            isClick = false;
+            clearTimeout(isRightClickTimeout);
+            const touch = touches[0];
+            ws.send(
+              [Math.round(touch.clientX), Math.round(touch.clientY)].join(" ")
+            );
+          });
+
+          window.addEventListener("touchend", () => {
+            clearTimeout(isRightClickTimeout);
+            if (isRightClick) {
+              ws.send([0, 0, "rClick"].join(" "));
+              isRightClick = false;
+              return;
+            }
+            if (isClick === false) {
+              return;
+            }
+            isClick = false;
+            ws.send([0, 0, "click"].join(" "));
+          });
+        };
+      };
+    </script>
+  </head>
+  <body style="background-color: #111111"></body>
+</html>
